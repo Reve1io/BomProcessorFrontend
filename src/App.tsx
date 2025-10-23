@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '../src/components/ui/button';
 import { Input } from '../src/components/ui/input';
 import { Card, CardContent } from '../src/components/ui/card';
@@ -11,6 +11,7 @@ import {
 } from "../src/components/ui/select"
 import { Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { saveAs } from "file-saver";
 
 export default function BomApp() {
     const [step, setStep] = useState(1);
@@ -28,6 +29,13 @@ export default function BomApp() {
     const startIdx = (currentPage - 1) * rowsPerPage;
     const endIdx = startIdx + rowsPerPage;
     const currentRows = result?.data?.slice(startIdx, endIdx) || [];
+
+    const paginatedData = useMemo(() => {
+        if (!result?.data || !Array.isArray(result.data)) return [];
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        return result.data.slice(start, end);
+    }, [result, currentPage, rowsPerPage]);
 
     const handleParseText = () => {
         const rows = rawData.trim().split('\n').map(r => r.split('\t'));
@@ -95,6 +103,16 @@ export default function BomApp() {
             });
 
             const data = await response.json();
+
+
+            if (!response.ok) {
+                throw new Error(data?.error || response.statusText);
+            }
+
+            if (!data || !Array.isArray(data.data)) {
+                throw new Error("Некорректный ответ от сервера");
+            }
+
             setResult(data);
             setStep(3);
         } catch (err) {
@@ -104,6 +122,25 @@ export default function BomApp() {
         }
     };
 
+    const handleExportExcel = () => {
+        if (!result || !result.data || result.data.length === 0) {
+            alert("Нет данных для экспорта");
+            return;
+        }
+
+        // Преобразуем данные в формат для xlsx
+        const ws = XLSX.utils.json_to_sheet(result.data);
+
+        // Создаём книгу и добавляем лист
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Результаты");
+
+        // Генерируем файл и сохраняем
+        const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([wbout], { type: "application/octet-stream" });
+
+        saveAs(blob, "result.xlsx");
+    };
 
     return (
         <div className="container mx-auto py-8">
@@ -188,14 +225,14 @@ export default function BomApp() {
             )}
 
 
-            {step === 3 && result && (
+            {step === 3 && result?.data && Array.isArray(result.data) && (
                 <Card>
                     <CardContent>
                         <h2 className="text-xl font-semibold mb-2">Шаг 3: Результат</h2>
 
                         {/* Выбор количества строк на странице */}
                         <div className="mb-2 flex items-center gap-2">
-                            <label>Строк на странице:</label>
+                            <label>Отображать по:</label>
                             <select
                                 value={rowsPerPage}
                                 onChange={(e) => {
@@ -208,27 +245,51 @@ export default function BomApp() {
                                     <option key={n} value={n}>{n}</option>
                                 ))}
                             </select>
+                            <Button onClick={handleExportExcel}>Скачать Excel</Button>
                         </div>
 
                         <div className="overflow-auto">
                             <table className="min-w-full border text-sm">
                                 <thead>
                                 <tr>
-                                    <th className="border p-2 bg-amber-100">MPN</th>
+                                    <th className="border p-2 bg-amber-100">#</th>
+                                    <th className="border p-2 bg-amber-100">Part Number</th>
                                     <th className="border p-2 bg-amber-100">Производитель</th>
-                                    <th className="border p-2 bg-amber-100">ID продавца</th>
                                     <th className="border p-2 bg-amber-100">Продавец</th>
-                                    <th className="border p-2 bg-amber-100">Запас</th>
-                                    <th className="border p-2 bg-amber-100">Количество</th>
-                                    <th className="border p-2 bg-amber-100">Цена</th>
+                                    <th className="border p-2 bg-amber-100">Наличие</th>
+                                    <th className="border p-2 bg-amber-100">Запрошено</th>
+                                    <th className="border p-2 bg-amber-100">Количество в оффере</th>
+                                    <th className="border p-2 bg-amber-100">Цена ($)</th>
+                                    <th className="border p-2 bg-amber-100">Статус</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {currentRows.map((row, rIdx) => (
-                                    <tr key={rIdx} className={row.status === 'Не найдено' ? 'bg-red-100' : ''}>
-                                        {Object.values(row).map((val, cIdx) => (
-                                            <td key={cIdx} className="border p-1">{val as React.ReactNode}</td>
-                                        ))}
+                                {paginatedData.map((row, idx) => (
+                                    <tr
+                                        key={idx}
+                                        className={row.status === "Не найдено" ? "bg-red-100" : ""}
+                                    >
+                                        <td className="border p-1">{(currentPage - 1) * rowsPerPage + idx + 1}</td>
+                                        <td className="border p-1">{row.mpn}</td>
+                                        <td className="border p-1">{row.manufacturer || "-"}</td>
+                                        <td className="border p-1">{row.seller_name || "-"}</td>
+                                        <td className="border p-1 text-center">{row.stock || "-"}</td>
+                                        <td className="border p-1 text-center">
+                                            {row.requested_quantity ?? "-"}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {row.offer_quantity ?? "-"}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {row.price ? row.price.toFixed(2) : "-"}
+                                        </td>
+                                        <td
+                                            className={`border p-1 text-center font-semibold ${
+                                                row.status === "Не найдено" ? "text-red-600" : "text-green-600"
+                                            }`}
+                                        >
+                                            {row.status}
+                                        </td>
                                     </tr>
                                 ))}
                                 </tbody>
