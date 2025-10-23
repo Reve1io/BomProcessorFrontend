@@ -53,7 +53,8 @@ export default function BomApp() {
     const handleProcess = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://127.0.0.1/process', {
+            const BASE_URL = import.meta.env.VITE_BASE_URL;
+            const response = await fetch(`${BASE_URL}/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mapping, data: parsedData })
@@ -130,8 +131,8 @@ export default function BomApp() {
                             <Button
                                 onClick={handleProcess}
                                 disabled={
-                                    !Object.values(mapping).includes('partNumber') ||
-                                    !Object.values(mapping).includes('quantity')
+                                    !Object.values(mapping).includes('partNumber')
+                                    //!Object.values(mapping).includes('quantity')
                                 }
                             >
                                 {loading ? (
