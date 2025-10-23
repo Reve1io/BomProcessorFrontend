@@ -18,6 +18,7 @@ export default function BomApp() {
     const [mapping, setMapping] = useState({});
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [autoSubmitOnPartNumber] = useState(false);
 
     const handleParseText = () => {
         const rows = rawData.trim().split('\n').map(r => r.split('\t'));
@@ -25,17 +26,20 @@ export default function BomApp() {
         setStep(2);
     };
 
-    const handleFileUpload = (event) => {
-        const file = event.target.files[0];
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = result instanceof ArrayBuffer ? new Uint8Array(result) : new Uint8Array(result as any);
+            const data = e.target?.result;
+            if (!data) return;
+
             const workbook = XLSX.read(data, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            console.log("Parsed Excel:", jsonData.slice(0, 5));
             setParsedData(jsonData.slice(0, 5));
             setStep(2);
         };
@@ -46,32 +50,59 @@ export default function BomApp() {
         setMapping(prev => {
             const newMapping = { ...prev, [colIndex]: value };
             console.log('mapping updated:', newMapping);
+
+            // Опционально: если включена авто-отправка и в новых маппингах появился partNumber — запустить обработку
+            if (autoSubmitOnPartNumber && Object.values(newMapping).includes('partNumber')) {
+                // Можно запускать handleProcess напрямую, но осторожно — может быть множественный вызов.
+                // Рекомендуется: статически пометить флаг и запускать когда не в состоянии loading.
+                if (!loading) {
+                    // небольшая задержка чтобы гарантировать обновление state и UX
+                    setTimeout(() => {
+                        handleProcess(newMapping);
+                    }, 200);
+                }
+            }
+
             return newMapping;
         });
     };
 
-    const handleProcess = async () => {
+    const handleProcess = async (manualMapping?: Record<string, string>) => {
+        const currentMapping = manualMapping ? { ...manualMapping } : { ...mapping };
+
+        if (!Object.values(currentMapping).includes('partNumber')) {
+            alert('Нельзя отправить запрос: необходимо сопоставить поле Part Number.');
+            return;
+        }
+
+        if (!parsedData || parsedData.length === 0) {
+            alert('Нет данных для обработки.');
+            return;
+        }
+
         setLoading(true);
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
             const response = await fetch(`${BASE_URL}/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mapping, data: parsedData })
+                body: JSON.stringify({ mapping: currentMapping, data: parsedData }),
             });
+
             const data = await response.json();
             setResult(data);
             setStep(3);
         } catch (err) {
-            alert(`Ошибка при обработке${err.message}`);
+            alert(`Ошибка при обработке: ${err.message}`);
         } finally {
             setLoading(false);
         }
     };
 
+
     return (
         <div className="container mx-auto py-8">
-            <h1 className="text-2xl font-bold mb-4">BOM Analyzer</h1>
+            <h1 className="text-2xl font-bold mb-4">Анализ BOM листа</h1>
 
             {step === 1 && (
                 <Card>
@@ -129,19 +160,22 @@ export default function BomApp() {
                         </div>
                         <div className="mt-4">
                             <Button
-                                onClick={handleProcess}
-                                disabled={
-                                    !Object.values(mapping).includes('partNumber')
-                                    //!Object.values(mapping).includes('quantity')
-                                }
+                                onClick={() => handleProcess()}
+                                disabled={!Object.values(mapping).includes('partNumber') || loading}
                             >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="animate-spin mr-2" /> Обработка...
-                                    </>
-                                ) : (
-                                    'Начать обработку'
-                                )}
+                                {loading ? (<><Loader2 className="animate-spin mr-2" /> Обработка...</>) : 'Начать обработку'}
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setParsedData([]);
+                                    setMapping({});
+                                    setRawData('');
+                                    setStep(1);
+                                }}
+                            >
+                                Загрузить другой файл
                             </Button>
                         </div>
                     </CardContent>
@@ -157,9 +191,13 @@ export default function BomApp() {
                             <table className="min-w-full border text-sm">
                                 <thead>
                                 <tr>
-                                    {Object.keys(result.data[0] || {}).map((key, i) => (
-                                        <th key={i} className="border p-2 bg-gray-100">{key}</th>
-                                    ))}
+                                    <th className="border p-2 bg-gray-100">MPN</th>
+                                    <th className="border p-2 bg-gray-100">Производитель</th>
+                                    <th className="border p-2 bg-gray-100">ID продавца</th>
+                                    <th className="border p-2 bg-gray-100">Продавец</th>
+                                    <th className="border p-2 bg-gray-100">Запас</th>
+                                    <th className="border p-2 bg-gray-100">Количество</th>
+                                    <th className="border p-2 bg-gray-100">Цена</th>
                                 </tr>
                                 </thead>
                                 <tbody>
