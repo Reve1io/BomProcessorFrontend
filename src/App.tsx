@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../src/components/ui/button';
+import { Input } from '../src/components/ui/input';
 import { Card, CardContent } from '../src/components/ui/card';
 import {
     Select,
@@ -19,6 +20,14 @@ export default function BomApp() {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [autoSubmitOnPartNumber] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const totalRows = result?.data?.length || 0;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const endIdx = startIdx + rowsPerPage;
+    const currentRows = result?.data?.slice(startIdx, endIdx) || [];
 
     const handleParseText = () => {
         const rows = rawData.trim().split('\n').map(r => r.split('\t'));
@@ -51,12 +60,8 @@ export default function BomApp() {
             const newMapping = { ...prev, [colIndex]: value };
             console.log('mapping updated:', newMapping);
 
-            // Опционально: если включена авто-отправка и в новых маппингах появился partNumber — запустить обработку
             if (autoSubmitOnPartNumber && Object.values(newMapping).includes('partNumber')) {
-                // Можно запускать handleProcess напрямую, но осторожно — может быть множественный вызов.
-                // Рекомендуется: статически пометить флаг и запускать когда не в состоянии loading.
                 if (!loading) {
-                    // небольшая задержка чтобы гарантировать обновление state и UX
                     setTimeout(() => {
                         handleProcess(newMapping);
                     }, 200);
@@ -115,7 +120,7 @@ export default function BomApp() {
                             onChange={e => setRawData(e.target.value)}
                         />
                         <div>
-                            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
+                            <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
                         </div>
                         <Button onClick={handleParseText} disabled={!rawData.trim()}>Продолжить</Button>
                     </CardContent>
@@ -158,7 +163,7 @@ export default function BomApp() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="mt-4">
+                        <div className="mt-4 flex gap-4">
                             <Button
                                 onClick={() => handleProcess()}
                                 disabled={!Object.values(mapping).includes('partNumber') || loading}
@@ -187,21 +192,39 @@ export default function BomApp() {
                 <Card>
                     <CardContent>
                         <h2 className="text-xl font-semibold mb-2">Шаг 3: Результат</h2>
+
+                        {/* Выбор количества строк на странице */}
+                        <div className="mb-2 flex items-center gap-2">
+                            <label>Строк на странице:</label>
+                            <select
+                                value={rowsPerPage}
+                                onChange={(e) => {
+                                    setRowsPerPage(Number(e.target.value));
+                                    setCurrentPage(1); // сброс на первую страницу
+                                }}
+                                className="border rounded p-1"
+                            >
+                                {[5, 10, 20, 50, 100].map(n => (
+                                    <option key={n} value={n}>{n}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="overflow-auto">
                             <table className="min-w-full border text-sm">
                                 <thead>
                                 <tr>
-                                    <th className="border p-2 bg-gray-100">MPN</th>
-                                    <th className="border p-2 bg-gray-100">Производитель</th>
-                                    <th className="border p-2 bg-gray-100">ID продавца</th>
-                                    <th className="border p-2 bg-gray-100">Продавец</th>
-                                    <th className="border p-2 bg-gray-100">Запас</th>
-                                    <th className="border p-2 bg-gray-100">Количество</th>
-                                    <th className="border p-2 bg-gray-100">Цена</th>
+                                    <th className="border p-2 bg-amber-100">MPN</th>
+                                    <th className="border p-2 bg-amber-100">Производитель</th>
+                                    <th className="border p-2 bg-amber-100">ID продавца</th>
+                                    <th className="border p-2 bg-amber-100">Продавец</th>
+                                    <th className="border p-2 bg-amber-100">Запас</th>
+                                    <th className="border p-2 bg-amber-100">Количество</th>
+                                    <th className="border p-2 bg-amber-100">Цена</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {result.data.map((row, rIdx) => (
+                                {currentRows.map((row, rIdx) => (
                                     <tr key={rIdx} className={row.status === 'Не найдено' ? 'bg-red-100' : ''}>
                                         {Object.values(row).map((val, cIdx) => (
                                             <td key={cIdx} className="border p-1">{val as React.ReactNode}</td>
@@ -211,12 +234,36 @@ export default function BomApp() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="mt-4 flex gap-2">
-                            <Button onClick={() => window.location.reload()}>Новый анализ</Button>
+
+                        {/* Пагинация */}
+                        <div className="mt-2 flex justify-between items-center">
+                            <div>
+                                <Button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    variant="outline"
+                                >
+                                    Назад
+                                </Button>
+                                <span className="mx-2">Страница {currentPage} из {totalPages}</span>
+                                <Button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    variant="outline"
+                                >
+                                    Вперёд
+                                </Button>
+                            </div>
+
+                            <Button
+                                onClick={() => window.location.reload()}
+                                variant="destructive"
+                            >Новый анализ</Button>
                         </div>
                     </CardContent>
                 </Card>
             )}
+
         </div>
     );
 }
