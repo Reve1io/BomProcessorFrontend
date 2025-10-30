@@ -25,7 +25,7 @@ jobs:
 
       - name: 🌿 Create .env before build
         run: |
-          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+          echo "VITE_API_URL=${{ secrets.VITE_BASE_URL }}" > .env
           echo "VITE_APP_MODE=production" >> .env
           echo "✅ Created .env file:"
           cat .env
