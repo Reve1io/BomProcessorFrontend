@@ -18,10 +18,17 @@ jobs:
       - name: 🟢 Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25   # Vite хорошо работает на Node 18 или 20
+          node-version: 25
 
       - name: 📦 Install dependencies
         run: npm ci
+
+      - name: 🌿 Create .env before build
+        run: |
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+          echo "VITE_APP_MODE=production" >> .env
+          echo "✅ Created .env file:"
+          cat .env
 
       - name: 🏗️ Build project
         run: npm run build
@@ -77,24 +84,13 @@ jobs:
             echo "📦 Moving new build to /var/www/bom-processor..."
             sudo rm -rf /var/www/bom-processor
             sudo mv ~/deploy_tmp/dist /var/www/bom-processor
-
-            # Создаём .env, если его нет
-            if [ ! -f "/var/www/bom-processor/.env" ]; then
-              echo "🌿 Creating .env file..."
-              sudo bash -c 'cat > /var/www/bom-processor/.env <<EOF
-              VITE_BASE_URL=${{ secrets.VITE_BASE_URL }}
-              VITE_APP_MODE=${{ secrets.VITE_APP_MODE }}
-              EOF'
-              else
-              echo "✅ .env already exists — keeping current version."
-              fi
   
-              # Назначаем права
-              sudo chmod -R 755 /var/www/bom-processor
-              sudo chown -R www-data:www-data /var/www/bom-processor
+            # Назначаем права
+            sudo chmod -R 755 /var/www/bom-processor
+            sudo chown -R www-data:www-data /var/www/bom-processor
   
-              # Перезапуск Nginx
-              echo "🔁 Restarting Nginx..."
-              sudo systemctl restart nginx
+            # Перезапуск Nginx
+            echo "🔁 Restarting Nginx..."
+            sudo systemctl restart nginx
   
-              echo "✅ Deployment completed successfully!"
+            echo "✅ Deployment completed successfully!"
