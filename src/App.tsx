@@ -1,11 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Card, CardContent } from './components/ui/card';
-import { Loader2 } from 'lucide-react';
+import './App.css';
 
 import { Step1Upload } from '../src/components/steps/Step1Upload';
 import { Step2Mapping } from '../src/components/steps/Step2Mapping';
@@ -15,6 +11,7 @@ export default function BomApp() {
     const [step, setStep] = useState(1);
     const [rawData, setRawData] = useState('');
     const [parsedData, setParsedData] = useState<any[][]>([]);
+    const [previewData, setPreviewData] = useState<any[][]>([]);
     const [mapping, setMapping] = useState<Record<number, string>>({});
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -25,22 +22,25 @@ export default function BomApp() {
     const totalRows = result?.data?.length || 0;
     const totalPages = Math.ceil(totalRows / rowsPerPage);
 
-    /** ========== ПАГИНАЦИЯ ========== */
     const paginatedData = useMemo(() => {
         if (!result?.data || !Array.isArray(result.data)) return [];
         const start = (currentPage - 1) * rowsPerPage;
         return result.data.slice(start, start + rowsPerPage);
     }, [result, currentPage, rowsPerPage]);
 
-    /** ========== ОБРАБОТЧИК ВСТАВКИ ТЕКСТА ========== */
     const handleParseText = () => {
         const rows = rawData.trim().split('\n').map(r => r.split('\t'));
         if (rows.length === 0) return alert("Нет данных для обработки.");
-        setParsedData(rows.slice(0, 5));
+        setParsedData(rows);
+        setPreviewData(rows.slice(0, 5));
+
+        if (rows[0].length === 1) {
+            setMapping({ 0: "partNumber" });
+        }
+
         setStep(2);
     };
 
-    /** ========== ОБРАБОТКА ФАЙЛА ========== */
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -55,14 +55,20 @@ export default function BomApp() {
             const worksheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-            console.log("📄 Parsed Excel:", jsonData.slice(0, 5));
-            setParsedData(jsonData.slice(0, 5));
+            console.log("📄 Parsed Excel:", jsonData);
+            setParsedData(jsonData);
+            setPreviewData(jsonData.slice(0, 5));
+
+            if (jsonData[0]?.length > 0) {
+                const defaultMapping = { 0: 'partNumber' };
+                setMapping(defaultMapping);
+            }
+
             setStep(2);
         };
         reader.readAsArrayBuffer(file);
     };
 
-    /** ========== ОБРАБОТКА СОПОСТАВЛЕНИЯ ========== */
     const handleMappingChange = (colIndex: number, value: string) => {
         setMapping(prev => {
             const newMapping = { ...prev, [colIndex]: value };
@@ -77,7 +83,6 @@ export default function BomApp() {
         });
     };
 
-    /** ========== ОТПРАВКА НА БЭКЕНД ========== */
     const handleProcess = async (manualMapping?: Record<string, string>) => {
         const currentMapping = manualMapping ? { ...manualMapping } : { ...mapping };
 
@@ -92,17 +97,17 @@ export default function BomApp() {
         setLoading(true);
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
-            const response = await fetch(`${BASE_URL}/process`, {
+            const response = await fetch(`${BASE_URL}/api/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mapping: currentMapping, data: parsedData }),
             });
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data?.error || response.statusText);
-            if (!Array.isArray(data.data)) throw new Error("Некорректный ответ от сервера");
+            const json = await response.json();
+            if (!response.ok) throw new Error(json?.error || response.statusText);
+            if (!Array.isArray(json.data)) throw new Error("Некорректный ответ от сервера");
 
-            setResult(data);
+            setResult(json);
             setStep(3);
         } catch (err: any) {
             alert(`Ошибка при обработке: ${err.message}`);
@@ -111,7 +116,6 @@ export default function BomApp() {
         }
     };
 
-    /** ========== ЭКСПОРТ В EXCEL ========== */
     const handleExportExcel = () => {
         if (!result?.data?.length) {
             return alert("Нет данных для экспорта");
@@ -124,7 +128,6 @@ export default function BomApp() {
         saveAs(blob, "result.xlsx");
     };
 
-    /** ========== РЕНДЕР ШАГОВ ========== */
     return (
         <div className="container mx-auto py-8">
             <h1 className="text-2xl font-bold mb-6">Анализ BOM листа</h1>
@@ -141,6 +144,7 @@ export default function BomApp() {
             {step === 2 && parsedData.length > 0 && (
                 <Step2Mapping
                     parsedData={parsedData}
+                    previewData={previewData}
                     mapping={mapping}
                     loading={loading}
                     handleMappingChange={handleMappingChange}
@@ -157,14 +161,14 @@ export default function BomApp() {
             {step === 3 && result?.data && (
                 <Step3Result
                     result={result}
-                    paginatedData={paginatedData}
+                    //paginatedData={paginatedData}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
                     rowsPerPage={rowsPerPage}
                     setRowsPerPage={setRowsPerPage}
                     handleExportExcel={handleExportExcel}
                     setStep={setStep}
-                    totalPages={totalPages} // <- добавляем
+                    //totalPages={totalPages} // <- добавляем
                     reset={() => {
                         setParsedData([]);
                         setMapping({});

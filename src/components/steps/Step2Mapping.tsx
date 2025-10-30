@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 interface Step2MappingProps {
     parsedData: any[][];
+    previewData: any[][];
     mapping: Record<string, string>;
     handleMappingChange: (colIndex: number, value: string) => void;
     handleProcess: () => void;
@@ -21,6 +22,7 @@ interface Step2MappingProps {
 
 export const Step2Mapping: React.FC<Step2MappingProps> = ({
                                                               parsedData,
+                                                              previewData,
                                                               mapping,
                                                               handleMappingChange,
                                                               handleProcess,
@@ -36,7 +38,9 @@ export const Step2Mapping: React.FC<Step2MappingProps> = ({
                     <tr>
                         {parsedData[0].map((_, i) => (
                             <th key={i} className="border p-2">
-                                <Select onValueChange={val => handleMappingChange(i, val)}>
+                                <Select
+                                    value={mapping[i] || 'partNumber'}
+                                    onValueChange={val => handleMappingChange(i, val)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Выберите поле" />
                                     </SelectTrigger>
@@ -52,7 +56,7 @@ export const Step2Mapping: React.FC<Step2MappingProps> = ({
                     </thead>
 
                     <tbody>
-                    {parsedData.map((row, rIdx) => (
+                    {previewData.map((row, rIdx) => (
                         <tr key={rIdx}>
                             {row.map((cell, cIdx) => (
                                 <td key={cIdx} className="border p-1">{cell}</td>
