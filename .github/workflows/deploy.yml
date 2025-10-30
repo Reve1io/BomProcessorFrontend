@@ -83,6 +83,7 @@ jobs:
               echo "🌿 Creating .env file..."
               sudo bash -c 'cat > /var/www/bom-processor/.env <<EOF
               VITE_BASE_URL=${{ secrets.VITE_BASE_URL }}
+              VITE_APP_MODE=${{ secrets.VITE_APP_MODE }}
               EOF'
               else
               echo "✅ .env already exists — keeping current version."
