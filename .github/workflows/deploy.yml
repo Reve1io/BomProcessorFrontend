@@ -1,0 +1,96 @@
+name: 🚀 Frontend Deploy (Vite + React)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:  # возможность запустить вручную из вкладки Actions
+
+jobs:
+  deploy:
+    name: 📦 Build & Deploy to Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25   # Vite хорошо работает на Node 18 или 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build project
+        run: npm run build
+
+      # --- Загрузка сборки на сервер ---
+      - name: 🚀 Deploy to Server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+
+            # Временная папка для загрузки
+            rm -rf ~/deploy_tmp
+            mkdir -p ~/deploy_tmp
+
+      - name: 📤 Upload build folder
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "dist/*"
+          target: "~/deploy_tmp"
+
+      - name: ⚙️ Finalize deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+
+            # Создание временной папки если нужно
+            mkdir -p ~/deploy_tmp
+
+            # Удаляем старую сборку и создаем бэкап
+            if [ -d "/var/www/bom-processor" ]; then
+              echo "🗂️ Creating backup of current version..."
+              sudo rm -rf /var/www/bom-processor_backup
+              sudo mv /var/www/bom-processor /var/www/bom-processor_backup
+            fi
+
+            # Перемещаем новую сборку
+            echo "📦 Moving new build to /var/www/bom-processor..."
+            sudo rm -rf /var/www/bom-processor
+            sudo mv ~/deploy_tmp/dist /var/www/bom-processor
+
+            # Создаём .env, если его нет
+            if [ ! -f "/var/www/bom-processor/.env" ]; then
+              echo "🌿 Creating .env file..."
+              sudo bash -c 'cat > /var/www/bom-processor/.env <<EOF
+              VITE_BASE_URL=${{ secrets.VITE_BASE_URL }}
+              EOF'
+              else
+              echo "✅ .env already exists — keeping current version."
+              fi
+  
+              # Назначаем права
+              sudo chmod -R 755 /var/www/bom-processor
+              sudo chown -R www-data:www-data /var/www/bom-processor
+  
+              # Перезапуск Nginx
+              echo "🔁 Restarting Nginx..."
+              sudo systemctl restart nginx
+  
+              echo "✅ Deployment completed successfully!"
