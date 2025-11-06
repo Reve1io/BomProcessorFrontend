@@ -29,17 +29,28 @@ export default function BomApp() {
     }, [result, currentPage, rowsPerPage]);
 
     const handleParseText = () => {
-        const rows = rawData.trim().split('\n').map(r => r.split('\t'));
-        if (rows.length === 0) return alert("Нет данных для обработки.");
-        setParsedData(rows);
-        setPreviewData(rows.slice(0, 5));
+        const cleaned = rawData
+            .trim()
+            .split(/\r?\n/)
+            .filter(line => line.trim().length > 0) // убираем пустые строки
+            .map(line => line.split(/\t|;/).map(cell => cell.trim())); // поддержка и табов, и точек с запятой
 
-        if (rows[0].length === 1) {
-            setMapping({ 0: "partNumber" });
+        if (cleaned.length === 0) return alert("Нет данных для обработки.");
+
+        console.log("📋 Parsed textarea:", cleaned);
+
+        setParsedData(cleaned);
+        setPreviewData(cleaned.slice(0, 5));
+
+        // если первая строка имеет несколько колонок, назначаем первую колонку как partNumber
+        if (cleaned[0].length > 0) {
+            const defaultMapping = { 0: "partNumber" };
+            setMapping(defaultMapping);
         }
 
         setStep(2);
     };
+
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -74,7 +85,10 @@ export default function BomApp() {
             const newMapping = { ...prev, [colIndex]: value };
             console.log('🗺️ Mapping updated:', newMapping);
 
-            if (autoSubmitOnPartNumber && Object.values(newMapping).includes('partNumber')) {
+            if (autoSubmitOnPartNumber &&
+                Object.values(newMapping).includes('partNumber') &&
+                parsedData.length > 0
+            ) {
                 if (!loading) {
                     setTimeout(() => handleProcess(newMapping), 200);
                 }
