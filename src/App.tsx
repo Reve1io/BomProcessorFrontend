@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import './App.css';
@@ -19,21 +19,12 @@ export default function BomApp() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    const totalRows = result?.data?.length || 0;
-    const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-    const paginatedData = useMemo(() => {
-        if (!result?.data || !Array.isArray(result.data)) return [];
-        const start = (currentPage - 1) * rowsPerPage;
-        return result.data.slice(start, start + rowsPerPage);
-    }, [result, currentPage, rowsPerPage]);
-
     const handleParseText = () => {
         const cleaned = rawData
             .trim()
             .split(/\r?\n/)
-            .filter(line => line.trim().length > 0) // убираем пустые строки
-            .map(line => line.split(/\t|;/).map(cell => cell.trim())); // поддержка и табов, и точек с запятой
+            .filter(line => line.trim().length > 0)
+            .map(line => line.split(/\t|;/).map(cell => cell.trim()));
 
         if (cleaned.length === 0) return alert("Нет данных для обработки.");
 
@@ -44,7 +35,10 @@ export default function BomApp() {
 
         // если первая строка имеет несколько колонок, назначаем первую колонку как partNumber
         if (cleaned[0].length > 0) {
-            const defaultMapping = { 0: "partNumber" };
+            const defaultMapping: Record<number, string> = {};
+            cleaned[0].forEach((_, i) => {
+                defaultMapping[i] = "partNumber";
+            });
             setMapping(defaultMapping);
         }
 
@@ -82,17 +76,34 @@ export default function BomApp() {
 
     const handleMappingChange = (colIndex: number, value: string) => {
         setMapping(prev => {
-            const newMapping = { ...prev, [colIndex]: value };
-            console.log('🗺️ Mapping updated:', newMapping);
+            let newMapping = { ...prev };
 
-            if (autoSubmitOnPartNumber &&
-                Object.values(newMapping).includes('partNumber') &&
+            for (const [key, val] of Object.entries(newMapping)) {
+                if (val === value && Number(key) !== colIndex) {
+                    delete newMapping[key];
+                }
+            }
+
+            newMapping[colIndex] = value;
+
+            // 🧠 Если пользователь выбрал "partNumber" вручную,
+            //     а оно уже стояло как "дефолт" — всё равно обновляем state,
+            //     чтобы React не игнорировал onValueChange
+            newMapping = { ...newMapping };
+
+            console.log("🗺️ Mapping updated:", newMapping);
+
+            // 🚀 Авто-запуск обработки, если выбрано поле Part Number
+            if (
+                autoSubmitOnPartNumber &&
+                Object.values(newMapping).includes("partNumber") &&
                 parsedData.length > 0
             ) {
                 if (!loading) {
                     setTimeout(() => handleProcess(newMapping), 200);
                 }
             }
+
             return newMapping;
         });
     };
@@ -175,20 +186,18 @@ export default function BomApp() {
             {step === 3 && result?.data && (
                 <Step3Result
                     result={result}
-                    //paginatedData={paginatedData}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
                     rowsPerPage={rowsPerPage}
                     setRowsPerPage={setRowsPerPage}
                     handleExportExcel={handleExportExcel}
                     setStep={setStep}
-                    //totalPages={totalPages} // <- добавляем
                     reset={() => {
                         setParsedData([]);
                         setMapping({});
                         setRawData('');
                         setStep(1);
-                    }} // <- добавляем
+                    }}
                 />
             )}
         </div>

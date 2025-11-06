@@ -21,7 +21,6 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                                                             setRowsPerPage,
                                                             handleExportExcel,
                                                             reset,
-                                                            setStep,
                                                         }) => {
     // 🔹 Локальная обработка пагинации
     const data = Array.isArray(result?.data) ? result.data : [];
