@@ -65,7 +65,10 @@ export default function BomApp() {
             setPreviewData(jsonData.slice(0, 5));
 
             if (jsonData[0]?.length > 0) {
-                const defaultMapping = { 0: 'partNumber' };
+                const defaultMapping: Record<number, string> = {};
+                jsonData[0].forEach((_, i) => {
+                    defaultMapping[i] = "partNumber";
+                });
                 setMapping(defaultMapping);
             }
 
@@ -135,7 +138,7 @@ export default function BomApp() {
             setResult(json);
             setStep(3);
         } catch (err: any) {
-            alert(`Ошибка при обработке: ${err.message}`);
+            console.log(`Ошибка при обработке: ${err.message}`);
         } finally {
             setLoading(false);
         }
