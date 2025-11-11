@@ -1,10 +1,28 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
 import App from './App.tsx'
+import cssText from './index.css?inline'
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const host = document.getElementById('react-root') || document.getElementById('root');
+
+if (host) {
+
+    const shadow = host.attachShadow({ mode: 'open' });
+
+
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    shadow.appendChild(style);
+
+    const reactContainer = document.createElement('div');
+    shadow.appendChild(reactContainer);
+
+    const root = createRoot(reactContainer);
+    root.render(
+        <StrictMode>
+            <App />
+        </StrictMode>
+    );
+} else {
+    console.warn('React root container not found.');
+}

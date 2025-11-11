@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 
 interface Step3ResultProps {
+    mode: "short" | "full";
     result: any;
     currentPage: number;
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
@@ -14,6 +15,7 @@ interface Step3ResultProps {
 }
 
 export const Step3Result: React.FC<Step3ResultProps> = ({
+                                                            mode,
                                                             result,
                                                             currentPage,
                                                             setCurrentPage,
@@ -27,6 +29,7 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
     const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
     const start = (currentPage - 1) * rowsPerPage;
     const paginatedData = data.slice(start, start + rowsPerPage);
+    const isShortMode = mode === 'short';
 
     return (
         <Card>
@@ -59,17 +62,25 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                             <th className="border p-2 bg-amber-100">#</th>
                             <th className="border p-1 bg-amber-100">MPN</th>
                             <th className="border p-1 bg-amber-100">Производитель</th>
-                            <th className="border p-1 bg-amber-100">Поставщик</th>
+                            { isShortMode ? null :
+                                <th className="border p-1 bg-amber-100">Поставщик</th>
+                            }
                             <th className="border p-1 bg-amber-100">Склад</th>
                             <th className="border p-1 bg-amber-100">Запрошено</th>
-                            <th className="border p-1 bg-amber-100">Кол-во в оффере</th>
+                            { isShortMode ? null :
+                                <th className="border p-1 bg-amber-100">Кол-во в оффере</th>
+                            }
                             <th className="border p-1 bg-amber-100">Цена</th>
                             <th className="border p-1 bg-amber-100">Валюта</th>
-                            <th className="border p-1 bg-amber-100">Коэф. доставки</th>
-                            <th className="border p-1 bg-amber-100">Наценка</th>
-                            <th className="border p-1 bg-amber-100">Целевая (закуп)</th>
-                            <th className="border p-1 bg-amber-100">Себестоимость с КД</th>
-                            <th className="border p-1 bg-amber-100">Целевая (продажа)</th>
+                            { isShortMode ? null :
+                                <>
+                                <th className="border p-1 bg-amber-100">Коэф. доставки</th>
+                                <th className="border p-1 bg-amber-100">Наценка</th>
+                                <th className="border p-1 bg-amber-100">Целевая (закуп)</th>
+                                <th className="border p-1 bg-amber-100">Себестоимость с КД</th>
+                                <th className="border p-1 bg-amber-100">Целевая (продажа)</th>
+                                </>
+                            }
                             <th className="border p-1 bg-amber-100">Статус</th>
                         </tr>
                         </thead>
@@ -85,37 +96,43 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                                     </td>
                                     <td className="border p-1">{row.mpn || '-'}</td>
                                     <td className="border p-1">{row.manufacturer || '-'}</td>
-                                    <td className="border p-1">{row.seller_name || '-'}</td>
+                                    { isShortMode ? null :
+                                        <td className="border p-1">{row.seller_name || '-'}</td>
+                                    }
                                     <td className="border p-1 text-center">{row.stock ?? '-'}</td>
                                     <td className="border p-1 text-center">{row.requested_quantity ?? '-'}</td>
-                                    <td className="border p-1 text-center">{row.offer_quantity ?? '-'}</td>
+                                    { isShortMode ? null :
+                                        <td className="border p-1 text-center">{row.offer_quantity ?? '-'}</td>
+                                    }
                                     <td className="border p-1 text-center">
                                         {typeof row.price === 'number' ? row.price.toFixed(2) : '-'}
                                     </td>
                                     <td className="border p-1 text-center">{row.currency || 'USD'}</td>
 
-                                    {/* Новые поля */}
-                                    <td className="border p-1 text-center">
-                                        {row.delivery_coef ? row.delivery_coef.toFixed(2) : '-'}
-                                    </td>
-                                    <td className="border p-1 text-center">
-                                        {row.markup ? row.markup.toFixed(2) : '-'}
-                                    </td>
-                                    <td className="border p-1 text-center">
-                                        {typeof row.target_price_purchasing === 'number'
-                                            ? row.target_price_purchasing.toFixed(2)
-                                            : '-'}
-                                    </td>
-                                    <td className="border p-1 text-center">
-                                        {typeof row.cost_with_delivery === 'number'
-                                            ? row.cost_with_delivery.toFixed(2)
-                                            : '-'}
-                                    </td>
-                                    <td className="border p-1 text-center">
-                                        {typeof row.target_price_sales === 'number'
-                                            ? row.target_price_sales.toFixed(2)
-                                            : '-'}
-                                    </td>
+                                    { isShortMode ? null :
+                                        <><td className="border p-1 text-center">
+                                            {row.delivery_coef ? row.delivery_coef.toFixed(2) : '-'}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {row.markup ? row.markup.toFixed(2) : '-'}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {typeof row.target_price_purchasing === 'number'
+                                                ? row.target_price_purchasing.toFixed(2)
+                                                : '-'}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {typeof row.cost_with_delivery === 'number'
+                                                ? row.cost_with_delivery.toFixed(2)
+                                                : '-'}
+                                        </td>
+                                        <td className="border p-1 text-center">
+                                            {typeof row.target_price_sales === 'number'
+                                                ? row.target_price_sales.toFixed(2)
+                                                : '-'}
+                                        </td>
+                                        </>
+                                    }
 
                                     <td
                                         className={`border p-1 text-center font-semibold ${

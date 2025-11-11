@@ -45,7 +45,6 @@ export default function BomApp() {
         setStep(2);
     };
 
-
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -89,14 +88,10 @@ export default function BomApp() {
 
             newMapping[colIndex] = value;
 
-            // 🧠 Если пользователь выбрал "partNumber" вручную,
-            //     а оно уже стояло как "дефолт" — всё равно обновляем state,
-            //     чтобы React не игнорировал onValueChange
             newMapping = { ...newMapping };
 
             console.log("🗺️ Mapping updated:", newMapping);
 
-            // 🚀 Авто-запуск обработки, если выбрано поле Part Number
             if (
                 autoSubmitOnPartNumber &&
                 Object.values(newMapping).includes("partNumber") &&
@@ -128,7 +123,7 @@ export default function BomApp() {
             const response = await fetch(`${BASE_URL}/api/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mapping: currentMapping, data: parsedData }),
+                body: JSON.stringify({ mapping: currentMapping, data: parsedData, mode: "short" }),
             });
 
             const json = await response.json();
@@ -188,6 +183,7 @@ export default function BomApp() {
 
             {step === 3 && result?.data && (
                 <Step3Result
+                    mode="short"
                     result={result}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}

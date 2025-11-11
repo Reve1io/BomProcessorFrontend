@@ -21,8 +21,8 @@ export const Step1Upload: React.FC<Step1InputProps> = ({
             <h2 className="text-xl font-semibold">Шаг 1: Ввод данных</h2>
 
             <textarea
-                className="w-full h-48 border p-2 rounded"
-                placeholder="Вставьте данные из Excel или CSV (разделитель — Tab)"
+                className="textarea w-full h-48 border p-2 rounded border-red-500"
+                placeholder="Вставьте данные из Excel или CSV"
                 value={rawData}
                 onChange={(e) => setRawData(e.target.value)}
             />
