@@ -18,6 +18,7 @@ export default function BomApp() {
     const [autoSubmitOnPartNumber] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [mode, setMode] = useState<"short" | "full">("full");
 
     const handleParseText = () => {
         const cleaned = rawData
@@ -123,7 +124,7 @@ export default function BomApp() {
             const response = await fetch(`${BASE_URL}/api/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mapping: currentMapping, data: parsedData, mode: "short" }),
+                body: JSON.stringify({ mapping: currentMapping, data: parsedData, mode: "full" }),
             });
 
             const json = await response.json();
@@ -183,7 +184,7 @@ export default function BomApp() {
 
             {step === 3 && result?.data && (
                 <Step3Result
-                    mode="short"
+                    mode={mode}
                     result={result}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
