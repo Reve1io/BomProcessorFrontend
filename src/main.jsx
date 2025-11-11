@@ -18,9 +18,13 @@ if (host) {
     shadow.appendChild(reactContainer);
 
     const root = createRoot(reactContainer);
+
+    const mode = window.BOM_USER_MODE || 'short';
+    console.log('Mode в React:', mode);
+
     root.render(
         <StrictMode>
-            <App />
+            <App mode={mode} />
         </StrictMode>
     );
 } else {

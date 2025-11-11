@@ -7,7 +7,11 @@ import { Step1Upload } from '../src/components/steps/Step1Upload';
 import { Step2Mapping } from '../src/components/steps/Step2Mapping';
 import { Step3Result } from '../src/components/steps/Step3Results';
 
-export default function BomApp() {
+interface BomAppProps {
+    mode: "short" | "full";
+}
+
+export default function BomApp({ mode }: BomAppProps) {
     const [step, setStep] = useState(1);
     const [rawData, setRawData] = useState('');
     const [parsedData, setParsedData] = useState<any[][]>([]);
@@ -18,7 +22,6 @@ export default function BomApp() {
     const [autoSubmitOnPartNumber] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [mode, setMode] = useState<"short" | "full">("full");
 
     const handleParseText = () => {
         const cleaned = rawData
@@ -124,7 +127,11 @@ export default function BomApp() {
             const response = await fetch(`${BASE_URL}/api/process`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mapping: currentMapping, data: parsedData, mode: "full" }),
+                body: JSON.stringify({
+                    mapping: currentMapping,
+                    data: parsedData,
+                    mode: mode,
+                }),
             });
 
             const json = await response.json();
