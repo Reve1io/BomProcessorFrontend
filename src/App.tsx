@@ -7,8 +7,21 @@ import { Step1Upload } from '../src/components/steps/Step1Upload';
 import { Step2Mapping } from '../src/components/steps/Step2Mapping';
 import { Step3Result } from '../src/components/steps/Step3Results';
 
+declare global {
+    interface Window {
+        BX: any;
+        BOM_FORM_DATA?: { name?: string; email?: string; phone?: string };
+    }
+}
+
 interface BomAppProps {
     mode: "short" | "full";
+}
+
+interface FormDataFields {
+    name: string;
+    email: string;
+    comment?: string;
 }
 
 export default function BomApp({ mode }: BomAppProps) {
@@ -159,6 +172,97 @@ export default function BomApp({ mode }: BomAppProps) {
         saveAs(blob, "result.xlsx");
     };
 
+    const handleExportExcelKP = (data: any[]) => {
+        if (!data?.length) {
+            alert("Нет данных для экспорта");
+            return null;
+        }
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Результаты");
+        const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+
+        return new Blob([wbout], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+    };
+
+// 1️⃣ Ожидаем, пока BX загрузится
+    const waitForBX = (callback: () => void) => {
+        if (window.BX) callback();
+        else setTimeout(() => waitForBX(callback), 200);
+    };
+
+// 2️⃣ Открытие модалки и установка слушателя
+    const handleGetOffer = () => {
+        waitForBX(() => {
+            const modal = new window.BX.PopupWindow("offer_popup", null, {
+                content: window.BX("offer-modal"),
+                autoHide: false,
+                closeByEsc: true,
+                closeIcon: { right: "10px", top: "10px" },
+                overlay: { backgroundColor: "black", opacity: 60 },
+                titleBar: { content: window.BX.create("span", { html: "<b>Запрос КП</b>" }) },
+                width: 600,
+            });
+            modal.show();
+
+            console.log("🟢 Bitrix форма открыта, навешиваем слушатель...");
+
+            const form = document.querySelector('#offer-modal form') as HTMLFormElement | null;
+
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // 👈 отменяем стандартный submit
+
+                    console.log("Перехват отправки Bitrix формы, начинаем handleSendOffer()");
+                    await handleSendOffer(form);
+                }, { once: true });
+            } else {
+                console.warn("Форма не найдена внутри offer-modal");
+            }
+        });
+    };
+
+    const handleSendOffer = async (form: HTMLFormElement) => {
+        try {
+            const name = (form.querySelector('input[name="form_text_140"]') as HTMLInputElement)?.value || "";
+            const email = (form.querySelector('input[name="form_email_141"]') as HTMLInputElement)?.value || "";
+            const phone = (form.querySelector('textarea[name="form_text_142"]') as HTMLTextAreaElement)?.value || "";
+
+            if (!name || !email) {
+                alert("Пожалуйста, заполните форму полностью перед отправкой КП");
+                return;
+            }
+
+            console.log("Полученные данные из формы:", { name, email, phone });
+
+            const excelBlob = await handleExportExcelKP(result.data); // твоя функция
+            const payload = new FormData();
+            payload.append("name", name);
+            payload.append("email", email);
+            payload.append("phone", phone);
+            payload.append("file", excelBlob, "bom-list.xlsx");
+
+            console.log("Отправляем данные AJAX-запросом...");
+
+            const response = await fetch("/local/ajax/send_offer.php", {
+                method: "POST",
+                body: payload,
+            });
+
+            const json = await response.json();
+            console.log("Результат отправки:", json);
+
+            alert(json.success ? "✅ КП отправлено!" : "❌ Ошибка при отправке КП");
+        } catch (err) {
+            console.error("Ошибка при отправке КП:", err);
+            alert("Произошла ошибка при формировании КП");
+        }
+    };
+
+
     return (
         <div className="container mx-auto py-8">
             <h1 className="text-2xl font-bold mb-6">Анализ BOM листа</h1>
@@ -199,6 +303,7 @@ export default function BomApp({ mode }: BomAppProps) {
                     setRowsPerPage={setRowsPerPage}
                     handleExportExcel={handleExportExcel}
                     setStep={setStep}
+                    handleGetOffer={handleGetOffer}
                     reset={() => {
                         setParsedData([]);
                         setMapping({});

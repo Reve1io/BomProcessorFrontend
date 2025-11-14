@@ -12,6 +12,7 @@ interface Step3ResultProps {
     handleExportExcel: () => void;
     setStep: React.Dispatch<React.SetStateAction<number>>;
     reset: () => void;
+    handleGetOffer;
 }
 
 export const Step3Result: React.FC<Step3ResultProps> = ({
@@ -23,6 +24,7 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                                                             setRowsPerPage,
                                                             handleExportExcel,
                                                             reset,
+                                                            handleGetOffer
                                                         }) => {
     // 🔹 Локальная обработка пагинации
     const data = Array.isArray(result?.data) ? result.data : [];
@@ -52,7 +54,11 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                             </option>
                         ))}
                     </select>
-                    <Button onClick={handleExportExcel}>Скачать Excel</Button>
+                    { isShortMode == null ? (
+                        <Button onClick={handleExportExcel}>Скачать Excel</Button>
+                    ) : (
+                        <Button onClick={() => handleGetOffer()}>Получить КП</Button>
+                    )}
                 </div>
 
                 <div className="overflow-auto">
