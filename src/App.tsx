@@ -18,12 +18,6 @@ interface BomAppProps {
     mode: "short" | "full";
 }
 
-interface FormDataFields {
-    name: string;
-    email: string;
-    comment?: string;
-}
-
 export default function BomApp({ mode }: BomAppProps) {
     const [step, setStep] = useState(1);
     const [rawData, setRawData] = useState('');
@@ -188,13 +182,11 @@ export default function BomApp({ mode }: BomAppProps) {
         });
     };
 
-// 1️⃣ Ожидаем, пока BX загрузится
     const waitForBX = (callback: () => void) => {
         if (window.BX) callback();
         else setTimeout(() => waitForBX(callback), 200);
     };
 
-// 2️⃣ Открытие модалки и установка слушателя
     const handleGetOffer = () => {
         waitForBX(() => {
             const modal = new window.BX.PopupWindow("offer_popup", null, {
@@ -207,8 +199,6 @@ export default function BomApp({ mode }: BomAppProps) {
                 width: 600,
             });
             modal.show();
-
-            console.log("🟢 Bitrix форма открыта, навешиваем слушатель...");
 
             const form = document.querySelector('#offer-modal form') as HTMLFormElement | null;
 
@@ -236,16 +226,13 @@ export default function BomApp({ mode }: BomAppProps) {
                 return;
             }
 
-            console.log("Полученные данные из формы:", { name, email, phone });
-
-            const excelBlob = await handleExportExcelKP(result.data); // твоя функция
+            const excelBlob = await handleExportExcelKP(result.data);
             const payload = new FormData();
             payload.append("name", name);
             payload.append("email", email);
             payload.append("phone", phone);
             payload.append("file", excelBlob, "bom-list.xlsx");
 
-            console.log("Отправляем данные AJAX-запросом...");
 
             const response = await fetch("/local/ajax/send_offer.php", {
                 method: "POST",
@@ -253,18 +240,14 @@ export default function BomApp({ mode }: BomAppProps) {
             });
 
             const json = await response.json();
-            console.log("Результат отправки:", json);
-
-            alert(json.success ? "✅ КП отправлено!" : "❌ Ошибка при отправке КП");
         } catch (err) {
             console.error("Ошибка при отправке КП:", err);
-            alert("Произошла ошибка при формировании КП");
         }
     };
 
 
     return (
-        <div className="container mx-auto py-8">
+        <div className="container mx-auto shadow-xl">
             <h1 className="text-2xl font-bold mb-6">Анализ BOM листа</h1>
 
             {step === 1 && (

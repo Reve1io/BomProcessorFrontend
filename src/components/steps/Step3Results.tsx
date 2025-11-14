@@ -54,10 +54,10 @@ export const Step3Result: React.FC<Step3ResultProps> = ({
                             </option>
                         ))}
                     </select>
-                    { isShortMode == null ? (
-                        <Button onClick={handleExportExcel}>Скачать Excel</Button>
+                    {mode === "short" ? (
+                        <Button onClick={handleGetOffer}>Получить КП</Button>
                     ) : (
-                        <Button onClick={() => handleGetOffer()}>Получить КП</Button>
+                        <Button onClick={handleExportExcel}>Скачать Excel</Button>
                     )}
                 </div>
 
