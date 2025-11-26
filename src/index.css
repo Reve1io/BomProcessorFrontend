@@ -94,13 +94,13 @@ button:focus-visible {
 }
 
 table {
-    border: 1px solid #383838;
+    border: 1px solid #eaeaea;
     border-radius: 4px;
     width: auto;
 }
 
 tr, td, th {
-    border: 1px solid #383838;
+    border: 1px solid #eaeaea;
 }
 
 th {
