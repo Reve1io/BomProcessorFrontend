@@ -9,7 +9,6 @@ if (host) {
 
     const shadow = host.attachShadow({ mode: 'open' });
 
-
     const style = document.createElement('style');
     style.textContent = cssText;
     shadow.appendChild(style);

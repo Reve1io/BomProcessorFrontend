@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { parseText } from "../utils/parseText";
 import { exportExcel, exportExcelKP } from "../utils/excel";
@@ -12,9 +12,14 @@ export function useProcessData(mode: "short" | "full") {
     const [mapping, setMapping] = useState<Record<number, string>>({});
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    const clearError = useCallback(() => {
+        setErrorMessage(null);
+    }, []);
 
     const handleParseText = () => {
         const cleaned = parseText(rawData);
@@ -72,9 +77,14 @@ export function useProcessData(mode: "short" | "full") {
     };
 
     const handleProcess = async () => {
-        if (!parsedData.length) return alert("Нет данных");
+        if (!parsedData.length) {
+            setErrorMessage("Нет данных для обработки");
+            return;
+        }
 
         setLoading(true);
+        setErrorMessage(null);
+
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
             const response = await fetch(`${BASE_URL}/api/process`, {
@@ -83,12 +93,32 @@ export function useProcessData(mode: "short" | "full") {
                 body: JSON.stringify({ mapping, data: parsedData, mode })
             });
 
+            if (!response.ok) {
+                const text = await response.text();
+                let errorMsg = `HTTP ${response.status}`;
+
+                try {
+                    const json = JSON.parse(text);
+                    errorMsg = json.error || json.message || errorMsg;
+                } catch {
+                    errorMsg = text || errorMsg;
+                }
+
+                throw new Error(errorMsg);
+            }
+
             const json = await response.json();
-            if (!response.ok) throw new Error(json.error);
             setResult(json);
 
-        } catch (e) {
-            console.error("Ошибка:", e);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setErrorMessage(message);
+
+            console.error('Process error:', err);
+
+            if (err instanceof Error && err.message.includes('critical')) {
+                throw err;
+            }
         } finally {
             setLoading(false);
         }
@@ -111,6 +141,8 @@ export function useProcessData(mode: "short" | "full") {
         handleMappingChange,
         handleProcess,
         handleExportExcel,
-        handleGetOffer
+        handleGetOffer,
+        errorMessage,
+        clearError,
     };
 }

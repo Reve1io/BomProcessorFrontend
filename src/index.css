@@ -135,6 +135,143 @@ option:active {
     box-shadow: 0px 4px 7px 0px rgba(34, 60, 80, 0.2);
 }
 
+/* error.css */
+.error-boundary {
+    padding: 40px 20px;
+    text-align: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+.error-content {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.error-message {
+    color: #dc3545;
+    margin: 15px 0;
+    font-size: 16px;
+}
+
+.error-details {
+    text-align: left;
+    margin: 20px 0;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.error-details summary {
+    cursor: pointer;
+    padding: 5px;
+    font-weight: bold;
+}
+
+.retry-button {
+    background: #ffad00;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 15px;
+}
+
+.retry-button:hover {
+    background: #D18F00;
+}
+
+.api-error-alert {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.alert-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.alert-message {
+    flex: 1;
+}
+
+.alert-message h3 {
+    margin: 0 0 5px 0;
+    color: #721c24;
+}
+
+.alert-message p {
+    margin: 0;
+    color: #721c24;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.alert-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.alert-button.retry {
+    background: #ffad00;
+    color: white;
+}
+
+.alert-button.dismiss {
+    background: #6c757d;
+    color: white;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #ffad00;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

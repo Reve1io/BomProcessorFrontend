@@ -30,16 +30,16 @@ export const FullTable = ({ data }) => {
                     <tr key={idx}>
                         <td className="border p-1 text-center">{idx + 1}</td>
                         <td className="border p-1">{row.requested_mpn}</td>
-                        <td className="border p-1">{row.mpn}</td>
-                        <td className="border p-1">{row.manufacturer}</td>
-                        <td className="border p-1">{row.seller_name}</td>
-                        <td className="border p-1 text-center">{row.stock}</td>
-                        <td className="border p-1 text-center">{row.requested_quantity}</td>
-                        <td className="border p-1 text-center">{row.offer_quantity}</td>
+                        <td className="border p-1">{row.mpn ?? "-"}</td>
+                        <td className="border p-1">{row.manufacturer ?? "-"}</td>
+                        <td className="border p-1">{row.seller_name ?? "-"}</td>
+                        <td className="border p-1 text-center">{row.stock ?? "-"}</td>
+                        <td className="border p-1 text-center">{row.requested_quantity ?? "-"}</td>
+                        <td className="border p-1 text-center">{row.offer_quantity ?? "-"}</td>
                         <td className="border p-1 text-center">
                             {typeof row.price === "number" ? row.price.toFixed(2) : "-"}
                         </td>
-                        <td className="border p-1 text-center">{row.currency}</td>
+                        <td className="border p-1 text-center">{row.currency ?? "-"}</td>
                         <td className="border p-1 text-center">{row.delivery_coef ?? "-"}</td>
                         <td className="border p-1 text-center">{row.markup ?? "-"}</td>
                         <td className="border p-1 text-center">{row.target_price_purchasing ?? "-"}</td>
