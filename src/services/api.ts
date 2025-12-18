@@ -3,6 +3,9 @@ import * as XLSX from "xlsx";
 import { parseText } from "../utils/parseText";
 import { exportExcel, exportExcelKP } from "../utils/excel";
 import { waitForBX, sendOfferToBitrix } from "../utils/bitrix";
+import { pollStatus } from "./polling";
+import { ProcessResponse, StatusResponse } from "./types";
+
 
 export function useProcessData(mode: "short" | "full") {
     const [step, setStep] = useState(1);
@@ -87,42 +90,37 @@ export function useProcessData(mode: "short" | "full") {
 
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
-            const response = await fetch(`${BASE_URL}/api/process`, {
+
+            const createRes = await fetch(`${BASE_URL}/api/v1/process`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mapping, data: parsedData, mode })
+                body: JSON.stringify({ mapping, data: parsedData, mode }),
             });
 
-            if (!response.ok) {
-                const text = await response.text();
-                let errorMsg = `HTTP ${response.status}`;
-
-                try {
-                    const json = JSON.parse(text);
-                    errorMsg = json.error || json.message || errorMsg;
-                } catch {
-                    errorMsg = text || errorMsg;
-                }
-
-                throw new Error(errorMsg);
+            if (!createRes.ok) {
+                const text = await createRes.text();
+                throw new Error(text || "Ошибка создания задачи");
             }
 
-            const json = await response.json();
-            setResult(json);
+            const createJson: ProcessResponse = await createRes.json();
+
+            const statusUrl = `${BASE_URL}${createJson.check_url}`;
+
+            const finalStatus: StatusResponse = await pollStatus(statusUrl);
+
+            setResult({ data: finalStatus.data });
 
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+            const message =
+                err instanceof Error ? err.message : "Неизвестная ошибка";
+
             setErrorMessage(message);
-
-            console.error('Process error:', err);
-
-            if (err instanceof Error && err.message.includes('critical')) {
-                throw err;
-            }
+            console.error("Process error:", err);
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleExportExcel = () => exportExcel(result?.data);
 
