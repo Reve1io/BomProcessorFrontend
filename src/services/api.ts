@@ -5,7 +5,7 @@ import { exportExcel, exportExcelKP } from "../utils/excel";
 import { waitForBX, sendOfferToBitrix } from "../utils/bitrix";
 import { pollStatus } from "./polling";
 import { ProcessResponse, StatusResponse } from "./types";
-
+import { adaptSecondApiToRows } from "./secondApiAdapter";
 
 export function useProcessData(mode: "short" | "full") {
     const [step, setStep] = useState(1);
@@ -87,28 +87,47 @@ export function useProcessData(mode: "short" | "full") {
 
         setLoading(true);
         setErrorMessage(null);
+        setResult({ data: [] }); // сразу очищаем
 
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
+            const SECOND_API = import.meta.env.VITE_SECOND_API;
 
+            // 🔵 Запуск первой API (как было)
             const createRes = await fetch(`${BASE_URL}/api/v1/process`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mapping, data: parsedData, mode }),
             });
 
-            if (!createRes.ok) {
-                const text = await createRes.text();
-                throw new Error(text || "Ошибка создания задачи");
-            }
-
             const createJson: ProcessResponse = await createRes.json();
-
             const statusUrl = `${BASE_URL}${createJson.check_url}`;
 
+            // 🟢 Запуск второй API ПАРАЛЛЕЛЬНО
+            const secondApiPromise = fetch(`${SECOND_API}/api/v1/ru/process`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mapping, data: parsedData, mode }),
+            })
+                .then(r => r.json())
+                .then(json => {
+                    const rows = adaptSecondApiToRows(json);
+
+                    // 👉 строки появляются сразу в таблице
+                    setResult(prev => ({
+                        data: [...(prev?.data ?? []), ...rows],
+                    }));
+                })
+                .catch(e => console.error("Second API error", e));
+
+            // 🔵 Poll первой API как раньше
             const finalStatus: StatusResponse = await pollStatus(statusUrl);
 
-            setResult({ data: finalStatus.data });
+            setResult(prev => ({
+                data: [...(prev?.data ?? []), ...finalStatus.data],
+            }));
+
+            await secondApiPromise;
 
         } catch (err) {
             const message =
@@ -120,7 +139,6 @@ export function useProcessData(mode: "short" | "full") {
             setLoading(false);
         }
     };
-
 
     const handleExportExcel = () => exportExcel(result?.data);
 

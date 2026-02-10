@@ -10,6 +10,7 @@ import {ApiErrorAlert} from "./components/error/ApiErrorAlert";
 import { LoadingErrorWrapper} from "./components/error/LoadingErrorWrapper";
 
 import { useProcessData } from "./services/api";
+import {Snowfall} from "react-snowfall";
 
 interface BomAppProps {
     mode: "short" | "full";
@@ -62,6 +63,7 @@ export default function App({ mode }: BomAppProps) {
     return (
         <ErrorBoundary fallback={errorFallback}>
         <div className="container mx-auto shadow-xl">
+            <Snowfall color="#82C3D9" />
             <h1 className="text-2xl font-bold mb-6">Анализ BOM листа</h1>
 
             {errorMessage && (
