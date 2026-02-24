@@ -6,6 +6,7 @@ import { waitForBX, sendOfferToBitrix } from "../utils/bitrix";
 import { pollStatus } from "./polling";
 import { ProcessResponse, StatusResponse, Delimiter } from "./types";
 import { adaptSecondApiToRows } from "./secondApiAdapter";
+import { adaptThirdApiToRows } from "./thirdApiAdapter";
 
 export function useProcessData(mode: "short" | "full") {
     const [step, setStep] = useState(1);
@@ -90,11 +91,16 @@ export function useProcessData(mode: "short" | "full") {
         setErrorMessage(null);
         setResult({ data: [] }); // сразу очищаем
 
+        const preparedData =
+            parsedData.length && parsedData[0][0] !== "MPN"
+                ? [["MPN", "Qty"], ...parsedData]
+                : parsedData;
+
         try {
             const BASE_URL = import.meta.env.VITE_BASE_URL;
             const SECOND_API = import.meta.env.VITE_SECOND_API;
 
-            // 🔵 Запуск первой API (как было)
+            // 🔵 Запуск первой API
             const createRes = await fetch(`${BASE_URL}/api/v1/process`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -105,11 +111,13 @@ export function useProcessData(mode: "short" | "full") {
             const statusUrl = `${BASE_URL}${createJson.check_url}`;
 
             // 🟢 Запуск второй API ПАРАЛЛЕЛЬНО
-            const secondApiPromise = fetch(`${SECOND_API}/api/v1/ru/process`, {
+
+            const secondApiPromise = fetch(`/proxy.php?target=process`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mapping, data: parsedData, mode }),
+                body: JSON.stringify({ mapping, data: preparedData, mode }),
             })
+
                 .then(r => r.json())
                 .then(json => {
                     const rows = adaptSecondApiToRows(json);
@@ -121,6 +129,23 @@ export function useProcessData(mode: "short" | "full") {
                 })
                 .catch(e => console.error("Second API error", e));
 
+            // 🟣 Запуск третьей API ПАРАЛЛЕЛЬНО
+
+            const thirdApiPromise = fetch(`/proxy.php?target=search`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mapping, data: preparedData, mode }),
+            })
+                .then(r => r.json())
+                .then(json => {
+                    const rows = adaptThirdApiToRows(json);
+
+                    setResult(prev => ({
+                        data: [...(prev?.data ?? []), ...rows],
+                    }));
+                })
+                .catch(e => console.error("Third API error", e));
+
             // 🔵 Poll первой API как раньше
             const finalStatus: StatusResponse = await pollStatus(statusUrl);
 
@@ -128,7 +153,7 @@ export function useProcessData(mode: "short" | "full") {
                 data: [...(prev?.data ?? []), ...finalStatus.data],
             }));
 
-            await secondApiPromise;
+            await Promise.all([secondApiPromise, thirdApiPromise]);
 
         } catch (err) {
             const message =
