@@ -4,12 +4,13 @@ import { parseText } from "../utils/parseText";
 import { exportExcel, exportExcelKP } from "../utils/excel";
 import { waitForBX, sendOfferToBitrix } from "../utils/bitrix";
 import { pollStatus } from "./polling";
-import { ProcessResponse, StatusResponse } from "./types";
+import { ProcessResponse, StatusResponse, Delimiter } from "./types";
 import { adaptSecondApiToRows } from "./secondApiAdapter";
 
 export function useProcessData(mode: "short" | "full") {
     const [step, setStep] = useState(1);
     const [rawData, setRawData] = useState("");
+    const [delimiter, setDelimiter] = useState<Delimiter>("tab");
     const [parsedData, setParsedData] = useState<any[][]>([]);
     const [previewData, setPreviewData] = useState<any[][]>([]);
     const [mapping, setMapping] = useState<Record<number, string>>({});
@@ -25,7 +26,7 @@ export function useProcessData(mode: "short" | "full") {
     }, []);
 
     const handleParseText = () => {
-        const cleaned = parseText(rawData);
+        const cleaned = parseText(rawData, delimiter);
         if (!cleaned.length) return alert("Нет данных");
 
         setParsedData(cleaned);
@@ -147,6 +148,7 @@ export function useProcessData(mode: "short" | "full") {
 
     return {
         rawData, setRawData,
+        delimiter, setDelimiter,
         parsedData, previewData,
         mapping, loading,
         result,

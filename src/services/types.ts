@@ -4,6 +4,12 @@ export type TaskStatus =
     | "FAILED"
     | "NOT_FOUND";
 
+export type Delimiter =
+    | "tab"
+    | "space"
+    | "semicolon"
+    | "comma";
+
 export interface ProcessResponse {
     task_id: string;
     check_url: string;
