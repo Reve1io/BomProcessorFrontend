@@ -89,82 +89,69 @@ export function useProcessData(mode: "short" | "full") {
 
         setLoading(true);
         setErrorMessage(null);
-        setResult({ data: [] }); // сразу очищаем
+        // Инициализируем объект сразу, чтобы UI начал рендерить пустую таблицу/список
+        setResult({ data: [] });
 
         const preparedData =
             parsedData.length && parsedData[0][0] !== "MPN"
                 ? [["MPN", "Qty"], ...parsedData]
                 : parsedData;
 
-        try {
-            const BASE_URL = import.meta.env.VITE_BASE_URL;
-            const SECOND_API = import.meta.env.VITE_SECOND_API;
+        const BASE_URL = import.meta.env.VITE_BASE_URL;
 
-            // 🔵 Запуск первой API
-            const createRes = await fetch(`${BASE_URL}/api/v1/process`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mapping, data: parsedData, mode }),
-            });
-
-            const createJson: ProcessResponse = await createRes.json();
-            const statusUrl = `${BASE_URL}${createJson.check_url}`;
-
-            // 🟢 Запуск второй API ПАРАЛЛЕЛЬНО
-
-            const secondApiPromise = fetch(`/proxy.php?target=process`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mapping, data: preparedData, mode }),
-            })
-
-                .then(r => r.json())
-                .then(json => {
-                    const rows = adaptSecondApiToRows(json);
-
-                    // 👉 строки появляются сразу в таблице
-                    setResult(prev => ({
-                        data: [...(prev?.data ?? []), ...rows],
-                    }));
-                })
-                .catch(e => console.error("Second API error", e));
-
-            // 🟣 Запуск третьей API ПАРАЛЛЕЛЬНО
-
-            const thirdApiPromise = fetch(`/proxy.php?target=search`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mapping, data: preparedData, mode }),
-            })
-                .then(r => r.json())
-                .then(json => {
-                    const rows = adaptThirdApiToRows(json);
-
-                    setResult(prev => ({
-                        data: [...(prev?.data ?? []), ...rows],
-                    }));
-                })
-                .catch(e => console.error("Third API error", e));
-
-            // 🔵 Poll первой API как раньше
-            const finalStatus: StatusResponse = await pollStatus(statusUrl);
-
-            setResult(prev => ({
-                data: [...(prev?.data ?? []), ...finalStatus.data],
+        // Функция-помощник для добавления данных, чтобы не дублировать код
+        const appendData = (newRows: any[]) => {
+            setResult((prev: any) => ({
+                ...prev,
+                data: [...(prev?.data ?? []), ...newRows],
             }));
-
-            await Promise.all([secondApiPromise, thirdApiPromise]);
-
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Неизвестная ошибка";
-
-            setErrorMessage(message);
-            console.error("Process error:", err);
-        } finally {
+            // Выключаем loading, как только пришли первые данные
             setLoading(false);
-        }
+        };
+
+        // 🔵 1. Первая API (с поллингом)
+        const firstApiPromise = fetch(`${BASE_URL}/api/v1/process`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mapping, data: parsedData, mode }),
+        })
+            .then(r => r.json())
+            .then(async (createJson: ProcessResponse) => {
+                const statusUrl = `${BASE_URL}${createJson.check_url}`;
+                const finalStatus: StatusResponse = await pollStatus(statusUrl);
+                appendData(finalStatus.data);
+            })
+            .catch(e => console.error("First API error", e));
+
+        // 🟢 2. Вторая API
+        const secondApiPromise = fetch(`/proxy.php?target=process`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mapping, data: preparedData, mode }),
+        })
+            .then(r => r.json())
+            .then(json => appendData(adaptSecondApiToRows(json)))
+            .catch(e => console.error("Second API error", e));
+
+        // 🟣 3. Третья API
+        const thirdApiPromise = fetch(`/proxy.php?target=search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mapping, data: preparedData, mode }),
+        })
+            .then(async r => {
+                const text = await r.text();
+                return JSON.parse(text);
+            })
+            .then(json => appendData(adaptThirdApiToRows(json)))
+            .catch(e => console.error("Third API error", e));
+
+        Promise.allSettled([firstApiPromise, secondApiPromise, thirdApiPromise]).then(() => {
+            setLoading(false); // Окончательно выключаем loading
+            console.log("All streams finished");
+        });
     };
+
 
     const handleExportExcel = () => exportExcel(result?.data);
 
@@ -189,3 +176,5 @@ export function useProcessData(mode: "short" | "full") {
         clearError,
     };
 }
+
+
