@@ -13,6 +13,7 @@ export const FullTable = ({ data }) => {
                 <th className="border p-1 bg-amber-100">Склад</th>
                 <th className="border p-1 bg-amber-100">Запрошено</th>
                 <th className="border p-1 bg-amber-100">Все price breaks</th>
+                <th className="border p-1 bg-amber-100">Сроки поставки</th>
                 <th className="border p-1 bg-amber-100">Цена под кол-во</th>
                 <th className="border p-1 bg-amber-100">Целевая закуп</th>
                 <th className="border p-1 bg-amber-100">Себестоимость</th>
@@ -59,6 +60,8 @@ export const FullTable = ({ data }) => {
                                     </div>
                                 ))}
                             </td>
+
+                            <td className="border p-1 text-xs">{row.delivery_time ?? "2-3 недели"}</td>
 
                             {/* 🔥 Активная цена под количество */}
                             <td className="border p-1 text-center font-semibold">

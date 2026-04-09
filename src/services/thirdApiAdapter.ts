@@ -8,6 +8,7 @@ export function adaptThirdApiToRows(data: any[]) {
         manufacturer: item.manufacturer,
         seller_name: item.supplier ?? "dcp service",
         stock: item.stock,
+        delivery_time: item.delivery_time ?? "-",
         status: item.status,
         priceBreaks: item.priceBreaks ?? [],
     }));

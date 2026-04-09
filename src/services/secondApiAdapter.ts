@@ -8,6 +8,7 @@ export function adaptSecondApiToRows(secondApiJson: any) {
         seller_name: item.seller_name ?? "-",
         stock: item.stock ?? "-",
         requested_quantity: item.requested_quantity ?? 1,
+        delivery_time: item.delivery_time ?? "-",
 
         priceBreaks: item.priceBreaks ?? [],
 
